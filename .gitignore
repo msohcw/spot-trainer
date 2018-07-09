@@ -1,0 +1,6 @@
+venv
+secrets
+__pycache__
+
+*.swp
+*.pyc
