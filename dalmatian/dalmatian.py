@@ -78,7 +78,7 @@ class Instance:
         # TODO This method doesn't actually retry anything right now
         method()
 
-    ### Public Interface ### 
+    ### Public Interface ###
 
     def save(self):
         _log("Initializing save")
