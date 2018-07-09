@@ -92,6 +92,8 @@ def _preflight_checks():
     assert instance != None, (
            "No instance found, have you run dalmatian.setup() yet?")
 
+### Public Interface ###
+
 def setup():
     global instance
     instance_name = (os.environ.get('DALMATIAN_INSTANCE')
@@ -105,9 +107,15 @@ def store_params(d):
     instance.state['parameters'].update(d)
     return get_params()
 
+def store_param(key, value):
+    store_params({key: value})
+
 def get_params():
     _preflight_checks()
     return copy.deepcopy(instance.state['parameters'])
+
+def get_param(key, default=None):
+    return instance.state['parameters'].get(key, default)
 
 class ImmutableObjectException(Exception):
     def __init__(self, item):
@@ -128,3 +136,6 @@ def watch_param(key, value):
 def checkpoint():
     _preflight_checks()
     instance.save()
+
+def wipe():
+    pass
