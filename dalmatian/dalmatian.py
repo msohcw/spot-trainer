@@ -19,6 +19,9 @@ class Instance:
         self.name = instance_name
         self.s3_client = boto.client('s3')
         self.ec2_client = boto.client('ec2')
+        self.state = {
+            'parameters': {}
+        }
 
         self._initialize_storage()
 
@@ -100,7 +103,7 @@ def setup():
 def store_params(d):
     _preflight_checks()
     instance.state['parameters'].update(d)
-    return copy.deepcopy(instance.state['parameters'])
+    return get_params()
 
 def get_params():
     _preflight_checks()
@@ -121,7 +124,6 @@ def watch_param(key, value):
         raise ImmutableObjectException(value)
     else:
         watch_set[key] = value
-        store_params(watch_set)
 
 def checkpoint():
     _preflight_checks()
