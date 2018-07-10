@@ -57,7 +57,14 @@ class Instance:
 
         stream = response['Body']
         bytedata = stream.read()
-        self.state = pickle.loads(bytedata)
+        try:
+            self.state = pickle.loads(bytedata)
+        except ModuleNotFoundError as e:
+            _log(e.msg)
+            _log("A module used to save the data is missing and the data cannot"
+                 " be loaded. Check if the required module is installed in your"
+                 " local environment.")
+            raise e
         _log("Request succeeded")
         return True
 
