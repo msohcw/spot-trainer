@@ -75,7 +75,7 @@ class Instance:
                                              Body=self._bytedata())
 
         status = response['ResponseMetadata']['HTTPStatusCode']
-        if status != 200: 
+        if status != 200:
             _log("Storage failed")
             return False
         _log("Storage succeeded")
@@ -85,12 +85,25 @@ class Instance:
         # TODO This method doesn't actually retry anything right now
         method()
 
+    def _erase_state(self):
+        _log("Erasing state from S3")
+        response = self.s3_client.delete_object(Bucket=bucket.name,
+                                                Key=self.state_name)
+        if status != 200:
+            _log("Erasure failed")
+            return False
+        _log("Erasure succeeded")
+        return True
+
     ### Public Interface ###
 
     def save(self):
         _log("Initializing save")
         self._safe_retry(self._put_state)
         _log("Save complete")
+
+    def erase(self):
+        self._safe_retry(self._erase_state)
 
 def _log(message):
     print(message)
@@ -145,4 +158,11 @@ def checkpoint():
     instance.save()
 
 def wipe():
-    pass
+    # TODO This is a temporary way of handling the need to erase past training
+    # cycles. Ideally, there should be a way to use S3 versioning to do this
+    # instead. After that change, this should be a method of last-resort that
+    # wipes all data.
+    _log("Beginning wipe")
+    response = self.s3_client.get_object(Bucket=bucket.name,
+                                         Key=self.state_name)
+    _log("Wipe complete")
