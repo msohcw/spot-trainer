@@ -19,11 +19,16 @@ class Instance:
         self.name = instance_name
         self.s3_client = boto.client('s3')
         self.ec2_client = boto.client('ec2')
-        self.state = {
-            'parameters': {}
-        }
 
-        self._initialize_storage()
+        try:
+            self.state = {
+                'parameters': {}
+            }
+            self._initialize_storage()
+            self.storage_initialized = True
+        except Exception as e:
+            _log("Failed to initialize storage")
+            self.storage_initialized = False
 
     def _initialize_storage(self):
         _log("Initializing storage")
@@ -54,7 +59,6 @@ class Instance:
             _log("Request failed")
             return False
 
-
         stream = response['Body']
         bytedata = stream.read()
         try:
@@ -81,19 +85,21 @@ class Instance:
         _log("Storage succeeded")
         return True
 
-    def _safe_retry(self, method):
-        # TODO This method doesn't actually retry anything right now
-        method()
-
     def _erase_state(self):
         _log("Erasing state from S3")
         response = self.s3_client.delete_object(Bucket=bucket.name,
                                                 Key=self.state_name)
-        if status != 200:
+
+        status = response['ResponseMetadata']['HTTPStatusCode']
+        if status != 204:
             _log("Erasure failed")
             return False
         _log("Erasure succeeded")
         return True
+
+    def _safe_retry(self, method):
+        # TODO This method doesn't actually retry anything right now
+        method()
 
     ### Public Interface ###
 
@@ -108,9 +114,12 @@ class Instance:
 def _log(message):
     print(message)
 
-def _preflight_checks():
+def _preflight_checks(storage=True):
     assert instance != None, (
            "No instance found, have you run dalmatian.setup() yet?")
+    if storage:
+        assert instance.storage_initialized (
+               "Storage not initialized. Retry dalmatian.setup()")
 
 ### Public Interface ###
 
@@ -162,7 +171,10 @@ def wipe():
     # cycles. Ideally, there should be a way to use S3 versioning to do this
     # instead. After that change, this should be a method of last-resort that
     # wipes all data.
+    global instance
+    _preflight_checks(storage=False)
+
     _log("Beginning wipe")
-    response = self.s3_client.get_object(Bucket=bucket.name,
-                                         Key=self.state_name)
+    instance.erase()
+    instance = None
     _log("Wipe complete")
