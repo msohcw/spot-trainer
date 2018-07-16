@@ -178,3 +178,8 @@ def wipe():
     instance.erase()
     instance = None
     _log("Wipe complete")
+
+def terminate():
+    # This is a stubbed method that could be used to do self-termination for
+    # AWS spot instances triggered without an orchestrator
+    pass
