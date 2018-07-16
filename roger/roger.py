@@ -7,8 +7,11 @@ DEFAULT_INSTANCE_PARAMETERS = {
     'ImageId': 'ami-c47c28bc',
     'MinCount': 1,
     'MaxCount': 1,
+    ### TEMPORARY PARAMETERS ###
     'InstanceType': 't2.micro',
     'SubnetId': 'subnet-338dc669',
+    'KeyName': 'ml-ec2-generic',
+    ############################
     'InstanceMarketOptions': {
         'MarketType': 'spot',
         'SpotOptions': {
