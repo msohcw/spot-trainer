@@ -61,10 +61,12 @@ class Instance:
 
 
     def load_code(self, *, code_path, remote_path, remote=False):
-        pass
+        if not code_path: return
+        if not remote:
+            self._load_local_code(code_path)
 
     def load_data(self, *, data_path, remote_path, remote=False):
-        pass
+        if not data_path: return
 
     # Helpers
 
