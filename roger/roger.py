@@ -59,6 +59,12 @@ class Instance:
         self.instance = self.ec2.create_instances(**instance_parameters)[0]
         self._connect_to_instance()
 
+    def setup_instance(self):
+        # HACK ~/.bashrc doesn't get run by Fabric commands so we need to copy
+        # it manually to ~/.profile. TODO find a better way to do this
+        log("Beginning instance setup")
+        self.connection.run('cat ~/.bashrc | grep export >> ~/.profile')
+        log("Instance setup complete")
 
     def load_code(self, *, code_path, remote_path, remote=False):
         if not code_path: return
