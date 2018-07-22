@@ -1,6 +1,8 @@
 import copy
-import datetime
+import os
+import pathlib
 import time
+import datetime
 import fabric
 from fabric import Connection
 import invoke
@@ -97,6 +99,13 @@ class Instance:
                 continue
             break
         log("Instance is now in 'running' mode")
+
+    def _load_local_code(self, code_path):
+        abs_path = pathlib.Path(code_path).resolve()
+        verify()
+        log("Loading code onto instance")
+        self.connection.put(str(abs_path), remote=self.remote_code_path)
+        log("Loading code complete")
 
 def verify():
     # stubbed method to do verification
