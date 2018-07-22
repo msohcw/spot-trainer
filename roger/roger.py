@@ -23,9 +23,17 @@ DEFAULT_INSTANCE_PARAMETERS = {
         }
 }
 
+DEFAULT_SECURITY_GROUP = 'us-west-2-default-sg'
+DEFAULT_KEY_PAIR = (pathlib.Path('~/.ssh/ml-ec2-generic.pem')
+                        .expanduser().as_posix())
+
 class Instance:
     def __init__(self):
         self.ec2 = boto.resource('ec2')
+        self.security_group_ids = self.ec2.security_groups.all().filter(
+                Filters=[{'Name': 'group-name',
+                          'Values': (DEFAULT_SECURITY_GROUP,)}]).limit(1)
+        self.security_group_ids = [x.id for x in self.security_group_ids]
         pass
 
     def spinup(self, *, code_path, data_path):
@@ -36,6 +44,7 @@ class Instance:
         spot_options = instance_parameters['InstanceMarketOptions']['SpotOptions']
         spot_options['ValidUntil'] = days_from_now(days)
         spot_options['MaxPrice'] = max_price
+        instance_parameters['SecurityGroupIds'] = self.security_group_ids
         instance_parameters.update(parameters)
 
         verify()
