@@ -67,3 +67,6 @@ def days_from_now(x):
     now = datetime.datetime.now()
     delta = datetime.timedelta(x)
     return now + delta
+
+def log(*args):
+    print(*args)
