@@ -8,6 +8,34 @@ from fabric import Connection
 import invoke
 import boto3 as boto
 
+### Monkey Patching for Invoke ###
+
+"""
+In the migration from Fabric 1 to Fabric 2, the option to send the interrupt
+exclusively to the remote process (remote_interrupt) was not ported. This monkey
+patch brings it back.
+
+This hack seems to have some issues with KeyboardInterrupts when using an
+interactive Python REPL.
+"""
+
+original_send_interrupt = fabric.runners.Remote.send_interrupt
+
+def send_interrupt(self, interrupt):
+    if not self.remote_interrupt:
+        self.remote_interrupt = True
+        raise interrupt
+    else:
+        original_send_interrupt(self, interrupt)
+
+def set_remote_interrupt(self, value):
+    self.config.runners['remote'].remote_interrupt = value
+
+fabric.runners.Remote.send_interrupt = send_interrupt
+fabric.Connection.set_remote_interrupt = set_remote_interrupt
+
+##################################
+
 DEFAULT_INSTANCE_PARAMETERS = {
     'ImageId': 'ami-c47c28bc',
     'MinCount': 1,
@@ -92,6 +120,11 @@ class Instance:
                     self.remote_code_path))
         log("Screen job initiated")
 
+    def listen(self):
+        log("Listening to job output")
+        self.connection.set_remote_interrupt(False)
+        self.connection.run("screen -RR", pty=True)
+
     # Helpers
 
     def _connect_to_instance(self):
@@ -114,6 +147,7 @@ class Instance:
                                          'key_filename': DEFAULT_KEY_PAIR
                                          }
                                      )
+        self.connection.set_remote_interrupt(True)
         log("Waiting for instance to be in 'running' mode")
         self.instance.wait_until_running()
         while True:
