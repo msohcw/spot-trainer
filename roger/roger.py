@@ -6,6 +6,7 @@ import datetime
 import fabric
 from fabric import Connection
 import invoke
+from invoke.watchers import StreamWatcher
 import boto3 as boto
 
 ### Monkey Patching for Invoke ###
@@ -166,6 +167,13 @@ class Instance:
         log("Loading code onto instance")
         self.connection.put(str(abs_path), remote=self.remote_code_path)
         log("Loading code complete")
+
+class LogReader(StreamWatcher):
+    def __init__(self, file_path=None):
+        pass
+    def submit(self, stream):
+        print(stream)
+        return []
 
 def verify():
     # stubbed method to do verification
