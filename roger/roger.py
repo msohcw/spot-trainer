@@ -1,6 +1,9 @@
 import copy
 import datetime
+import time
 import fabric
+from fabric import Connection
+import invoke
 import boto3 as boto
 
 DEFAULT_INSTANCE_PARAMETERS = {
@@ -63,6 +66,37 @@ class Instance:
 
     # Helpers
 
+    def _connect_to_instance(self):
+        MAX_WAIT, backoff = 30, 5
+        while True:
+            self.instance.reload()
+            public_ip = self.instance.public_ip_address
+            if public_ip: break
+            log("Waiting for {} seconds for instance IP address".format(backoff))
+            time.sleep(backoff)
+            backoff = min(30, backoff + 5)
+        log("IP address obtained:", public_ip)
+
+        port = 22
+        user = 'ubuntu'
+        self.connection = Connection(host=public_ip,
+                                     user=user,
+                                     port=port,
+                                     connect_kwargs={
+                                         'key_filename': DEFAULT_KEY_PAIR
+                                         }
+                                     )
+        log("Waiting for instance to be in 'running' mode")
+        self.instance.wait_until_running()
+        while True:
+            try:
+                self.connection.run('echo "Completed instance connection test"')
+            except Exception:
+                log("Waiting for instance to respond")
+                time.sleep(5)
+                continue
+            break
+        log("Instance is now in 'running' mode")
 
 def verify():
     # stubbed method to do verification
