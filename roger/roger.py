@@ -39,10 +39,17 @@ class Instance:
                 Filters=[{'Name': 'group-name',
                           'Values': (DEFAULT_SECURITY_GROUP,)}]).limit(1)
         self.security_group_ids = [x.id for x in self.security_group_ids]
+        self.remote_code_path = '/home/ubuntu/code.py'
+        self.remote_data_path = '/not/yet/implemented/data'
+        self.conda_env = 'pytorch_p36'
         pass
 
     def spinup(self, *, code_path, data_path):
-        pass
+        self.load_instance()
+        self.load_code(code_path=code_path, remote_path=self.remote_code_path)
+        self.load_data(data_path=data_path, remote_path=self.remote_data_path)
+        self.setup_instance()
+        self.run()
 
     def load_instance(self, *, days=3, max_price ='0.0035', parameters={}):
         instance_parameters = copy.deepcopy(DEFAULT_INSTANCE_PARAMETERS)
@@ -73,6 +80,17 @@ class Instance:
 
     def load_data(self, *, data_path, remote_path, remote=False):
         if not data_path: return
+
+    def run(self):
+        log("Initiating screen job")
+        # This repeated prefixing is kinda hacky. TODO look into better ways of
+        # getting persistent context/environment
+        with self.connection.prefix('source ~/.profile'):
+            with self.connection.prefix(
+                    'source activate {}'.format(self.conda_env)):
+                self.connection.run('screen -dmL python -u {}'.format(
+                    self.remote_code_path))
+        log("Screen job initiated")
 
     # Helpers
 
