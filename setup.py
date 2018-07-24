@@ -27,6 +27,9 @@ CURRENT = {
         'KeyName': 'ml-ec2-generic'
     }
 
+# AWS interface used for validating config
+ec2 = boto.resource('ec2')
+
 def build_config():
 
     print()
@@ -35,6 +38,7 @@ def build_config():
     print("###############################")
     dalmatian = {}
     ask(dalmatian, 'S3Bucket', 'S3 Bucket')
+
     ask(dalmatian, 'InstanceName', 'Instance Name')
 
     print("###############################")
@@ -43,8 +47,9 @@ def build_config():
     roger = {}
     ask(roger, 'ImageId', 'Instance AMI', info={
         'ami-c47c28bc': 'Ubuntu Deep Learning AMI'
-        })
-    ask(roger, 'InstanceType', 'Instance Type')
+        },
+        validate=validate_ami)
+    ask(roger, 'InstanceType', 'Instance Type', validate=validate_instance_type)
     ask(roger, 'SubnetId', 'Subnet ID')
     ask(roger, 'KeyName', 'Key Pair Name')
 
@@ -55,7 +60,7 @@ def build_config():
     print(dalmatian)
     print(roger)
 
-def ask(section, key, item, info=None):
+def ask(section, key, item, info=None, validate=lambda x: True):
     if info is None: info = {}
     for x in info.values():
         assert type(x) == str, "All given values should be strings"
@@ -78,9 +83,39 @@ def ask(section, key, item, info=None):
 
         if not final_value:
             print("A non-empty value is required.")
+        elif not validate(final_value):
+            continue
         else:
             section[key] = final_value
             break
+
+def validator(test):
+    def validate(value):
+        try:
+            return test(value)
+        except Exception as e:
+            print("Validation failed: {}".format(str(e)))
+            return False
+    return validate
+
+@validator
+def validate_ami(ami):
+    image = ec2.Image(ami)
+    if image.name: return True
+
+@validator
+def validate_instance_type(instance_type):
+    # boto3 does not actually provide a way of listing all the valid instance
+    # types on AWS.
+    # TODO fill out this list with all the instance types
+    INSTANCE_TYPES = [
+            't2.micro',
+            'p2.xlarge',
+            'p2.8xlarge',
+            'p2.16xlarge'
+            ]
+    if instance_type in INSTANCE_TYPES: return True
+    raise Exception("Invalid instance type")
 
 if __name__ == '__main__':
     build_config()
