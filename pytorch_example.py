@@ -120,7 +120,11 @@ def main():
     ###################
 
     for epoch in range(start_epoch, args.epochs + 1):
+        # Epoch is not a mutable that we can watch, so we update it every time
+        # the epoch changes using store_params
         dalm.store_params({'epoch': epoch})
+        # Declaring a checkpoint triggers a save of all watched data structures
+        # and stored params
         dalm.checkpoint()
         train(args, model, device, train_loader, optimizer, epoch)
         test(args, model, device, test_loader)
