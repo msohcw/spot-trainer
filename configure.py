@@ -1,3 +1,5 @@
+from pprint import pprint
+from collections import OrderedDict
 import configparser
 from haikunator import Haikunator
 import boto3 as boto
@@ -36,15 +38,14 @@ def build_config():
     print("###############################")
     print("### Dalmatian Configuration ###")
     print("###############################")
-    dalmatian = {}
+    dalmatian = OrderedDict()
     ask(dalmatian, 'S3Bucket', 'S3 Bucket')
-
     ask(dalmatian, 'InstanceName', 'Instance Name')
 
     print("###############################")
     print("###   Roger Configuration   ###")
     print("###############################")
-    roger = {}
+    roger = OrderedDict()
     ask(roger, 'ImageId', 'Instance AMI', info={
         'ami-c47c28bc': 'Ubuntu Deep Learning AMI'
         },
@@ -57,8 +58,12 @@ def build_config():
     print("###############################")
     print("###   Final Configuration   ###")
     print("###############################")
-    print(dalmatian)
-    print(roger)
+    config = OrderedDict()
+    config['dalmatian'] = dalmatian
+    config['roger'] = roger
+    pprint({'dalmatian': dict(dalmatian),
+            'roger': dict(roger)})
+    return config
 
 def ask(section, key, item, info=None, validate=lambda x: True):
     if info is None: info = {}
