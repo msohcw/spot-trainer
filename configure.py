@@ -9,11 +9,6 @@ hkn = Haikunator()
 def build_name(token_length=0):
     return hkn.haikunate(token_length=token_length)
 
-"""
-There are two overriding values, DEFAULT and CURRENT.
-New Value > Current > Default
-"""
-
 DEFAULT_CONFIG_FILENAME = 'default_config.ini'
 CONFIG_FILENAME = 'config.ini'
 
@@ -76,6 +71,9 @@ def ask(section, key, item, info=None, validate=lambda x: True):
 
 
         user_specified = input().strip()
+
+        # There are two overriding values, DEFAULT and CURRENT.
+        # New Value > Current > Default
         final_value = (user_specified
                         or CURRENT.get(key, None)
                         or DEFAULT.get(key, None))
