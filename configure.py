@@ -14,6 +14,7 @@ There are two overriding values, DEFAULT and CURRENT.
 New Value > Current > Default
 """
 
+DEFAULT_CONFIG_FILENAME = 'default_config.ini'
 CONFIG_FILENAME = 'config.ini'
 
 # Dynamic defaults are created here
@@ -119,12 +120,17 @@ if __name__ == '__main__':
     config = configparser.ConfigParser()
     # Override to prevent lowercasing of keys
     config.optionxform = lambda option: option
+
+    # First load the defaults, then try and load the present configuration
+    config_file = open(DEFAULT_CONFIG_FILENAME)
     try:
-        config_dict = config.read_file(open(CONFIG_FILENAME))
-        DEFAULT.update(config['default'])
-        CURRENT = {**config['dalmatian'], **config['roger']}
-    except FileNotFoundError as e:
-        CURRENT = {}
+        config_file = open(CONFIG_FILENAME)
+    except FileNotFoundError:
+        pass
+
+    config_dict = config.read_file(config_file)
+    DEFAULT.update(config['default'])
+    CURRENT = {**config['dalmatian'], **config['roger']}
 
     config_dict = build_config()
     config.read_dict(config_dict)
