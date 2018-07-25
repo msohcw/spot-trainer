@@ -14,19 +14,12 @@ There are two overriding values, DEFAULT and CURRENT.
 New Value > Current > Default
 """
 
+CONFIG_FILENAME = 'config.ini'
+
+# Dynamic defaults are created here
 DEFAULT = {
-    # Ubuntu Deep Learning AMI
-    'ImageId': 'ami-c47c28bc',
-    # TODO change after testing to a GPU instance
-    'InstanceType': 't2.micro',
     'InstanceName': build_name(),
     'S3Bucket': build_name(token_length=4)
-    }
-
-CURRENT = {
-        'S3Bucket': 'dalmatian',
-        'SubnetId': 'subnet-338dc669',
-        'KeyName': 'ml-ec2-generic'
     }
 
 # AWS interface used for validating config
@@ -123,4 +116,18 @@ def validate_instance_type(instance_type):
     raise Exception("Invalid instance type")
 
 if __name__ == '__main__':
-    build_config()
+    config = configparser.ConfigParser()
+    # Override to prevent lowercasing of keys
+    config.optionxform = lambda option: option
+    try:
+        config_dict = config.read_file(open(CONFIG_FILENAME))
+        DEFAULT.update(config['default'])
+        CURRENT = {**config['dalmatian'], **config['roger']}
+    except FileNotFoundError as e:
+        CURRENT = {}
+
+    config_dict = build_config()
+    config.read_dict(config_dict)
+
+    with open(CONFIG_FILENAME, 'w') as config_file:
+      config.write(config_file)
