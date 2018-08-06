@@ -118,7 +118,7 @@ def _preflight_checks(storage=True):
     assert instance != None, (
            "No instance found, have you run dalmatian.setup() yet?")
     if storage:
-        assert instance.storage_initialized (
+        assert instance.storage_initialized, (
                "Storage not initialized. Retry dalmatian.setup()")
 
 ### Public Interface ###
