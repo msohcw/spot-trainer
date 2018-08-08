@@ -28,7 +28,21 @@ We're still looking into a better way to build/define these permissions to be
 exactly what is required for running `dalmatian` or `roger`.
 
 ## Dalmatian
-TODO: View the code examples for now.
+Dalmatian is built around simplifying the process of saving in-memory state (e.g. model
+parameters) and artifacts (e.g. output images) so that they don't get lost when an
+instance is stopped.
+
+Dalmatian is not built around saving everything. For example, it doesn't try to save the
+model itself, each library has its own way of doing that.
+
+The present state of Dalmatian is very raw, and likely to change to accomodate common
+deep learning frameworks. There are already examples of usage with PyTorch, TensorFlow
+and Keras, although each feels very different and awkward right now. These shims will
+likely be fixed up and better unified in future versions. Expect breaking changes until
+a v1 is out.
+
+## Dalmatian API
+TODO
 
 ## Roger
 TODO
