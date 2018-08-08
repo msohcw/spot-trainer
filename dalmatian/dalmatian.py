@@ -10,8 +10,6 @@ DEFAULT_INSTANCE_NAME = "amazing-artichoke"
 
 
 instance = None
-s3 = boto.resource("s3")
-bucket = s3.Bucket("dalmatian")
 watch_set = {}
 
 
@@ -20,6 +18,9 @@ class Instance:
         self.name = instance_name
         self.s3_client = boto.client("s3")
         self.ec2_client = boto.client("ec2")
+
+        s3 = boto.resource("s3")
+        self.bucket = s3.Bucket("dalmatian")
 
         try:
             self.state = {"parameters": {}}
@@ -35,7 +36,7 @@ class Instance:
 
         # Check if data already exists
         state_keys = [
-            state.key for state in bucket.objects.filter(Prefix=self.state_name)
+            state.key for state in self.bucket.objects.filter(Prefix=self.state_name)
         ]
 
         if self.state_name in state_keys:
@@ -52,7 +53,9 @@ class Instance:
 
     def _get_state(self):
         _log("Requesting state from S3")
-        response = self.s3_client.get_object(Bucket=bucket.name, Key=self.state_name)
+        response = self.s3_client.get_object(
+            Bucket=self.bucket.name, Key=self.state_name
+        )
 
         status = response["ResponseMetadata"]["HTTPStatusCode"]
         if status != 200:
@@ -77,7 +80,7 @@ class Instance:
     def _put_state(self):
         _log("Storing state into S3")
         response = self.s3_client.put_object(
-            Bucket=bucket.name, Key=self.state_name, Body=self._bytedata()
+            Bucket=self.bucket.name, Key=self.state_name, Body=self._bytedata()
         )
 
         status = response["ResponseMetadata"]["HTTPStatusCode"]
@@ -89,7 +92,9 @@ class Instance:
 
     def _erase_state(self):
         _log("Erasing state from S3")
-        response = self.s3_client.delete_object(Bucket=bucket.name, Key=self.state_name)
+        response = self.s3_client.delete_object(
+            Bucket=self.bucket.name, Key=self.state_name
+        )
 
         status = response["ResponseMetadata"]["HTTPStatusCode"]
         if status != 204:
