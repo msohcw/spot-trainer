@@ -1,8 +1,10 @@
+import sys
 import os
 import copy
 import pathlib
 import time
 import datetime
+from configparser import ConfigParser
 import fabric
 from fabric import Connection
 import invoke
@@ -70,6 +72,8 @@ DEFAULT_INSTANCE_NAME = "amazing-artichoke"
 class Instance:
     def __init__(self):
         self.ec2 = boto.resource("ec2")
+        self.s3 = boto.resource("s3")
+        self.bucket = self.s3.Bucket(DEFAULT_BUCKET)
         self.security_group_ids = (
             self.ec2.security_groups.all()
             .filter(
@@ -84,12 +88,59 @@ class Instance:
         self.name = os.environ.get('DALMATIAN_INSTANCE', DEFAULT_INSTANCE_NAME)
         pass
 
-    def spinup(self, *, code_path, data_path):
+    def spinup(self, *, package_path, data_path):
+        self.load_package(package_path=package_path)
+        self.build_run_script()
+        self.build_userdata()
         self.load_instance()
-        self.load_code(code_path=code_path, remote_path=self.remote_code_path)
-        self.load_data(data_path=data_path, remote_path=self.remote_data_path)
-        self.setup_instance()
-        self.run()
+        # self.load_code(code_path=code_path, remote_path=self.remote_code_path)
+        # self.load_data(data_path=data_path, remote_path=self.remote_data_path)
+        # self.setup_instance()
+        # self.run()
+
+    def load_package(self, *, package_path):
+        # TODO fail loudly here when the package zip can't be found
+        # TODO add package validation
+        self.bucket.upload_file(
+            package_path, "packages/{}.zip".format(self.name)
+        )
+
+    def build_run_script(self):
+        pass
+
+    def build_userdata(self):
+        roger_loc = os.path.dirname(os.path.realpath(__file__))
+
+        cloud_config_loc = pathlib.Path(roger_loc, "cloud-config")
+        if not cloud_config_loc.is_file():
+            log(
+                "Could not find cloud-config file. Looked at {}.".format(
+                    cloud_config_loc
+                )
+            )
+            raise Exception
+        else:
+            with open(cloud_config_loc) as cloud_config:
+                self.userdata = cloud_config.read()
+
+        credentials_loc = pathlib.Path(roger_loc, "../secrets/dalmatian-client")
+        config = ConfigParser()
+        if not credentials_loc.is_file():
+            log(
+                "Could not find AWS credentials. Looked at {}.".format(credentials_loc)
+            )
+            raise Exception
+        else:
+            # TODO this is clearly not the best way of putting secrets in
+            with open(credentials_loc) as credentials:
+                config.read_file(credentials)
+                self.userdata = self.userdata.format(
+                    DALMATIAN_INSTANCE=self.name,
+                    AWS_ACCESS_KEY_ID=config.get("default", "aws_access_key_id"),
+                    AWS_SECRET_ACCESS_KEY=config.get(
+                        "default", "aws_secret_access_key"
+                    ),
+                )
 
     def load_instance(self, *, days=3, max_price="0.0035", parameters={}):
         instance_parameters = copy.deepcopy(DEFAULT_INSTANCE_PARAMETERS)
@@ -98,6 +149,8 @@ class Instance:
         spot_options["MaxPrice"] = max_price
         instance_parameters["SecurityGroupIds"] = self.security_group_ids
         instance_parameters.update(parameters)
+        # UserData should always be as specified
+        instance_parameters["UserData"] = self.userdata
 
         verify()
 
