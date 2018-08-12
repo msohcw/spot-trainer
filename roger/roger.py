@@ -85,7 +85,7 @@ class Instance:
         self.remote_code_path = "/home/ubuntu/code.py"
         self.remote_data_path = "/not/yet/implemented/data"
         self.conda_env = "pytorch_p36"
-        self.name = os.environ.get('DALMATIAN_INSTANCE', DEFAULT_INSTANCE_NAME)
+        self.name = os.environ.get("DALMATIAN_INSTANCE", DEFAULT_INSTANCE_NAME)
         pass
 
     def spinup(self, *, package_path, data_path):
@@ -101,9 +101,7 @@ class Instance:
     def load_package(self, *, package_path):
         # TODO fail loudly here when the package zip can't be found
         # TODO add package validation
-        self.bucket.upload_file(
-            package_path, "packages/{}.zip".format(self.name)
-        )
+        self.bucket.upload_file(package_path, "packages/{}.zip".format(self.name))
 
     def build_run_script(self):
         pass
@@ -126,9 +124,7 @@ class Instance:
         credentials_loc = pathlib.Path(roger_loc, "../secrets/dalmatian-client")
         config = ConfigParser()
         if not credentials_loc.is_file():
-            log(
-                "Could not find AWS credentials. Looked at {}.".format(credentials_loc)
-            )
+            log("Could not find AWS credentials. Looked at {}.".format(credentials_loc))
             raise Exception
         else:
             # TODO this is clearly not the best way of putting secrets in
