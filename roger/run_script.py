@@ -9,7 +9,7 @@ from botocore.exceptions import ClientError
 
 DEFAULT_INSTANCE_NAME = "amazing-artichoke"
 DEFAULT_BUCKET = "dalmatian"
-BASE_DIR = os.environ.get("BASE_DIR", os.getcwd() + "/build")
+BASE_DIR = os.environ.get("BASE_DIR", os.getcwd())
 INSTANCE_NAME = os.environ.get("DALMATIAN_INSTANCE", DEFAULT_INSTANCE_NAME)
 PACKAGE_KEY = "packages/{}.zip".format(INSTANCE_NAME)
 PACKAGE_LOCAL_LOCATION = "{}/package.zip".format(BASE_DIR)
@@ -38,6 +38,7 @@ s3 = boto.resource("s3")
 package = Path(PACKAGE_LOCAL_LOCATION)
 if not package.is_file():
     try:
+        print(PACKAGE_LOCAL_LOCATION)
         s3.Object(DEFAULT_BUCKET, PACKAGE_KEY).download_file(PACKAGE_LOCAL_LOCATION)
     except ClientError as e:
         if "Not Found" in repr(e):
