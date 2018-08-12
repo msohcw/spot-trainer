@@ -1,5 +1,5 @@
-import copy
 import os
+import copy
 import pathlib
 import time
 import datetime
@@ -60,8 +60,11 @@ DEFAULT_INSTANCE_PARAMETERS = {
     },
 }
 
+### TEMPORARY PARAMETERS ###
 DEFAULT_SECURITY_GROUP = "us-west-2-default-sg"
 DEFAULT_KEY_PAIR = pathlib.Path("~/.ssh/ml-ec2-generic.pem").expanduser().as_posix()
+DEFAULT_BUCKET = "dalmatian"
+DEFAULT_INSTANCE_NAME = "amazing-artichoke"
 
 
 class Instance:
@@ -78,6 +81,7 @@ class Instance:
         self.remote_code_path = "/home/ubuntu/code.py"
         self.remote_data_path = "/not/yet/implemented/data"
         self.conda_env = "pytorch_p36"
+        self.name = os.environ.get('DALMATIAN_INSTANCE', DEFAULT_INSTANCE_NAME)
         pass
 
     def spinup(self, *, code_path, data_path):
