@@ -1,24 +1,41 @@
 #cloud-config
 
 write_files:
--   content: |
-        #!/bin/bash
-        cd /home/ubuntu
-        mkdir build
-        cd build
-        # These PATH additions are lifted from the Deep Learning AMI
-        export PATH=/home/ubuntu/anaconda3/bin/:/home/ubuntu/bin:/home/ubuntu/.local/bin:/home/ubuntu/anaconda3/bin/:/usr/local/cuda/bin:/usr/local/bin:/opt/aws/bin:/usr/local/mpi/bin:/usr/local/cuda/bin:/usr/local/bin:/opt/aws/bin:/home/ubuntu/src/cntk/bin:/usr/local/mpi/bin:/usr/local/cuda/bin:/usr/local/bin:/opt/aws/bin:/usr/local/mpi/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:$PATH
-        source activate pytorch_p36
-        export DALMATIAN_INSTANCE={DALMATIAN_INSTANCE}
-        export AWS_ACCESS_KEY_ID={AWS_ACCESS_KEY_ID}
-        export AWS_SECRET_ACCESS_KEY={AWS_SECRET_ACCESS_KEY}
-        export AWS_DEFAULT_REGION=us-west-2
-        # TODO remove this hack when the libraries are pip installable
-        git clone https://github.com/msohcw/spot-trainer.git
-        ln -s spot-trainer/dalmatian dalmatian
-        wget "https://s3-us-west-2.amazonaws.com/dalmatian-public-read/core/run_script.py" -O run_script.py
-        python -u run_script.py 2> error > out
-    path: /home/ubuntu/cloud-init.sh
+- content: |
+    [Unit]
+    Description=Roger run script
+
+    [Service]
+    Type=simple
+    ExecStart=/bin/bash -c /home/ubuntu/cloud-init.sh
+    StandardOutput=syslog
+    StandardError=syslog
+    SyslogIdentifier=roger
+    Restart=always
+
+    [Install]
+    WantedBy=multi-user.target
+  path: /etc/systemd/system/roger.service
+- content: |
+    #!/bin/bash
+    cd /home/ubuntu
+    mkdir build
+    cd build
+    # These PATH additions are lifted from the Deep Learning AMI
+    export PATH=/home/ubuntu/anaconda3/bin/:/home/ubuntu/bin:/home/ubuntu/.local/bin:/home/ubuntu/anaconda3/bin/:/usr/local/cuda/bin:/usr/local/bin:/opt/aws/bin:/usr/local/mpi/bin:/usr/local/cuda/bin:/usr/local/bin:/opt/aws/bin:/home/ubuntu/src/cntk/bin:/usr/local/mpi/bin:/usr/local/cuda/bin:/usr/local/bin:/opt/aws/bin:/usr/local/mpi/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:$PATH
+    source activate pytorch_p36
+    export DALMATIAN_INSTANCE={DALMATIAN_INSTANCE}
+    export AWS_ACCESS_KEY_ID={AWS_ACCESS_KEY_ID}
+    export AWS_SECRET_ACCESS_KEY={AWS_SECRET_ACCESS_KEY}
+    export AWS_DEFAULT_REGION=us-west-2
+    # TODO remove this hack when the libraries are pip installable
+    git clone https://github.com/msohcw/spot-trainer.git
+    ln -s spot-trainer/dalmatian dalmatian
+    wget "https://s3-us-west-2.amazonaws.com/dalmatian-public-read/core/run_script.py" -O run_script.py
+    python -u run_script.py 2> error > out
+    #python -u run_script.py
+  path: /home/ubuntu/cloud-init.sh
 runcmd:
  - chmod +x /home/ubuntu/cloud-init.sh
- - /home/ubuntu/cloud-init.sh
+ - systemctl enable roger
+ - systemctl start roger
