@@ -60,6 +60,9 @@ DEFAULT_INSTANCE_PARAMETERS = {
             "InstanceInterruptionBehavior": "stop",
         },
     },
+    "IamInstanceProfile": {
+        "Arn": "arn:aws:iam::686737240330:instance-profile/RogerInitatedInstance",
+    }
 }
 
 ### TEMPORARY PARAMETERS ###
