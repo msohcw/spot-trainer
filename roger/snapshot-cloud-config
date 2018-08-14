@@ -1,0 +1,18 @@
+#cloud-config
+
+write_files:
+- content: |
+    #!/bin/bash
+    cd /home/ubuntu
+    mkdir data
+    cd data
+    # TODO make this into a more concrete script
+    python -c "import boto3 as boto; s3 = boto.resource('s3'); s3.meta.client.download_file('dalmatian', 'data-packages/{data_package}.zip', 'data-package.zip')"
+    unzip data-package.zip
+    rm data-package.zip
+    cd /home/ubuntu
+    touch snapshot-ready
+  path: /home/ubuntu/snapshot.sh
+runcmd:
+ - chmod +x /home/ubuntu/snapshot.sh
+ - /home/ubuntu/snapshot.sh
