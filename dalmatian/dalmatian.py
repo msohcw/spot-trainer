@@ -28,6 +28,7 @@ class Instance:
             self.storage_initialized = True
         except Exception as e:
             _log("Failed to initialize storage")
+            # TODO this needs to fail louder
             self.storage_initialized = False
 
     def _initialize_storage(self):

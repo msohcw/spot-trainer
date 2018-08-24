@@ -111,6 +111,7 @@ class Instance:
     def load_package(self, *, package_path):
         # TODO fail loudly here when the package zip can't be found
         # TODO add package validation
+        # TODO should we split this out somehow?
         self.bucket.upload_file(package_path, "packages/{}.zip".format(self.name))
 
     def build_run_script(self):
