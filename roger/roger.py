@@ -10,6 +10,8 @@ from fabric import Connection
 import invoke
 from invoke.watchers import StreamWatcher
 import boto3 as boto
+from botocore.exceptions import ClientError
+
 
 ### Monkey Patching for Invoke ###
 
@@ -65,6 +67,11 @@ DEFAULT_INSTANCE_PARAMETERS = {
     },
 }
 
+PERMANENT_INSTANCE_PARAMETERS = copy.deepcopy(DEFAULT_INSTANCE_PARAMETERS)
+PERMANENT_INSTANCE_PARAMETERS["InstanceType"] = "t2.micro"
+PERMANENT_INSTANCE_PARAMETERS.pop("InstanceMarketOptions")
+
+
 ### TEMPORARY PARAMETERS ###
 DEFAULT_SECURITY_GROUP = "us-west-2-default-sg"
 DEFAULT_KEY_PAIR = pathlib.Path("~/.ssh/ml-ec2-generic.pem").expanduser().as_posix()
@@ -89,17 +96,17 @@ class Instance:
         self.remote_data_path = "/not/yet/implemented/data"
         self.conda_env = "pytorch_p36"
         self.name = os.environ.get("DALMATIAN_INSTANCE", DEFAULT_INSTANCE_NAME)
+        self.ami_id = os.environ.get("AMI", None)
+
+        self.snapshot_meta = {"name": "-".join((self.name, "snapshot"))}
         pass
 
     def spinup(self, *, package_path, data_path):
+        self.load_data(data_path=data_path)
         self.load_package(package_path=package_path)
         self.build_run_script()
         self.build_userdata()
         self.load_instance()
-        # self.load_code(code_path=code_path, remote_path=self.remote_code_path)
-        # self.load_data(data_path=data_path, remote_path=self.remote_data_path)
-        # self.setup_instance()
-        # self.run()
 
     def load_package(self, *, package_path):
         # TODO fail loudly here when the package zip can't be found
@@ -150,6 +157,8 @@ class Instance:
         instance_parameters.update(parameters)
         # UserData should always be as specified
         instance_parameters["UserData"] = self.userdata
+        if self.ami:
+            instance_parameters["ImageId"] = self.ami_id
 
         verify()
 
@@ -171,9 +180,91 @@ class Instance:
         if not remote:
             self._load_local_code(code_path)
 
-    def load_data(self, *, data_path, remote_path, remote=False):
+    def load_data(self, *, data_path, remote=False):
         if not data_path:
             return
+
+        if self.ami_id:
+            log("Using AMI {}".format(self.ami_id))
+            return
+
+        def upload_callback(byte_count):
+            log("{} bytes uploaded...".format(byte_count))
+
+        log("Uploading data package to S3")
+        self.bucket.upload_file(
+            data_path,
+            "data-packages/{}.zip".format(self.name),
+            Callback=upload_callback,
+        )
+        log("Upload complete")
+
+        instance_parameters = copy.deepcopy(PERMANENT_INSTANCE_PARAMETERS)
+        instance_parameters["BlockDeviceMappings"] = [
+            {
+                "DeviceName": "/dev/sda1",
+                "Ebs": {"VolumeSize": 80},  # TODO make this configurable
+            }
+        ]
+        instance_parameters["SecurityGroupIds"] = self.security_group_ids
+
+        roger_loc = os.path.dirname(os.path.realpath(__file__))
+
+        snapshot_cc_loc = pathlib.Path(roger_loc, "snapshot-cloud-config")
+        if not snapshot_cc_loc.is_file():
+            log(
+                "Could not find snapshot-cloud-config file. Looked at {}.".format(
+                    cloud_config_loc
+                )
+            )
+            raise Exception
+        else:
+            with open(snapshot_cc_loc) as snapshot_cc:
+                snapshot_cc = snapshot_cc.read()
+                snapshot_cc = snapshot_cc.format(data_package=self.name)
+                instance_parameters["UserData"] = snapshot_cc
+
+        log("Creating snapshot...")
+        self.snapshot_instance = self.ec2.create_instances(**instance_parameters)[0]
+        self.snapshot_instance.wait_until_running()
+
+        # TODO insert a wait here to check for snapshot-ready file
+
+        # TODO verify before deleting previous snapshot
+        matching_images = tuple(
+            x
+            for x in self.ec2.images.filter(
+                Filters=[{"Name": "name", "Values": [self.snapshot_meta["name"]]}]
+            )
+        )
+        for image in matching_images:
+            # TODO check behaviour around EBS termination as a result
+            if image.state == 'available':
+                image.deregister()
+
+        # TODO how long to wait before creating image? how to check?
+        self.ami = self.snapshot_instance.create_image(Name=self.snapshot_meta["name"])
+        self.ami_id = self.ami.id
+        log("Created AMI {} with data package".format(self.ami_id))
+
+        # TODO Abstract away this internal AWS representation
+        log('Waiting for AMI to exist')
+        self.ami.wait_until_exists()
+        # TODO improve this wait cycle
+        while True:
+            if self.ami.state == 'pending':
+                log('Waiting for AMI to be available...')
+                time.sleep(5)
+            else:
+                if self.ami.state == 'available':
+                    log('AMI available')
+                    break
+            self.ami.reload()
+
+        self.snapshot_instance.terminate()
+        log('Waiting for termination')
+        self.snapshot_instance.wait_until_terminated()
+
 
     def run(self):
         log("Initiating screen job")
