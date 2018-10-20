@@ -240,7 +240,7 @@ class Instance:
         )
         for image in matching_images:
             # TODO check behaviour around EBS termination as a result
-            if image.state == 'available':
+            if image.state == "available":
                 image.deregister()
 
         # TODO how long to wait before creating image? how to check?
@@ -249,7 +249,7 @@ class Instance:
         log("Created AMI {} with data package".format(self.ami_id))
 
         # TODO Abstract away this internal AWS representation
-        log('Waiting for AMI to exist')
+        log("Waiting for AMI to exist")
         self.ami.wait_until_exists()
         # TODO improve this wait cycle
         while True:
@@ -263,9 +263,8 @@ class Instance:
             self.ami.reload()
 
         self.snapshot_instance.terminate()
-        log('Waiting for termination')
+        log("Waiting for termination")
         self.snapshot_instance.wait_until_terminated()
-
 
     def run(self):
         log("Initiating screen job")
