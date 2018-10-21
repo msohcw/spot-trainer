@@ -238,7 +238,9 @@ class Instance:
         self.snapshot_instance.wait_until_running()
 
         # TODO insert a wait here to check for snapshot-ready file
-        import pdb; pdb.set_trace()
+        import pdb
+
+        pdb.set_trace()
 
         # TODO verify before deleting previous snapshot
         matching_images = tuple(
