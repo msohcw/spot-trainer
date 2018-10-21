@@ -375,3 +375,63 @@ def days_from_now(x):
 
 def log(*args):
     print(*args)
+
+
+class PermissionedResource:
+    """
+    A PermissionedResource is a wrapper around any AWS resource that requires
+    appropriate IAM Credentials to access, e.g. an S3 bucket or an EC2 instance.
+    """
+
+    def __init__(self):
+        pass
+
+
+class ComputeNode(PermissionedResource):
+    """
+    A wrapper around an EC2 instance.
+    """
+
+    def __init__(self):
+        pass
+
+
+class StorageNode(PermissionedResource):
+    """
+    A wrapper around an S3 Bucket.
+    """
+
+    def __init__(self):
+        pass
+
+
+class Orchestrator:
+    """
+    The Orchestrator is the logical representation of the permissioned AWS profile. It
+    can create buckets, instances and IAM profiles.
+    """
+
+    def __init__(self):
+        pass
+
+    def create_training_instance(self):
+        """
+        Registers a training instance specific UUID
+        """
+        pass
+
+    def create_storage_node(self, *, training_instance):
+        """
+        Provisions an S3 bucket for parameters and data
+        Returns the appropriate permissions
+        """
+        pass
+
+
+class TrainingInstance:
+    def __init__(self, uuid=None):
+        pass
+
+    def upload():
+        """ Uploads data to the tied storage node. """
+        pass
