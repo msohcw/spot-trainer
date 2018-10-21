@@ -78,6 +78,14 @@ DEFAULT_KEY_PAIR = pathlib.Path("~/.ssh/ml-ec2-generic.pem").expanduser().as_pos
 DEFAULT_BUCKET = "dalmatian"
 DEFAULT_INSTANCE_NAME = "amazing-artichoke"
 
+### Utils ###
+def backoff_wait(predicate, update, backoff_max=30, backoff_step=5, initial=5):
+    backoff = initial
+    while not predicate():
+        update(backoff=backoff)
+        time.sleep(backoff)
+        backoff = min(backoff_max, backoff + backoff_step)
+
 
 class Instance:
     def __init__(self):
@@ -166,7 +174,7 @@ class Instance:
         assert instance_parameters["MaxCount"] == 1
         assert instance_parameters["MinCount"] == 1
         self.instance = self.ec2.create_instances(**instance_parameters)[0]
-        self._connect_to_instance()
+        self.connect_to_instance()
 
     def setup_instance(self):
         # HACK ~/.bashrc doesn't get run by Fabric commands so we need to copy
@@ -230,6 +238,7 @@ class Instance:
         self.snapshot_instance.wait_until_running()
 
         # TODO insert a wait here to check for snapshot-ready file
+        import pdb; pdb.set_trace()
 
         # TODO verify before deleting previous snapshot
         matching_images = tuple(
@@ -251,16 +260,25 @@ class Instance:
         # TODO Abstract away this internal AWS representation
         log("Waiting for AMI to exist")
         self.ami.wait_until_exists()
-        # TODO improve this wait cycle
-        while True:
-            if self.ami.state == 'pending':
-                log('Waiting for AMI to be available...')
-                time.sleep(5)
-            else:
-                if self.ami.state == 'available':
-                    log('AMI available')
-                    break
+
+        ami_ready = lambda: self.ami.state != "pending"
+
+        def update(**kwargs):
+            log("Waiting for AMI to be available...")
             self.ami.reload()
+
+        backoff_wait(ami_ready, update)
+
+        if self.ami.state == "available":
+            log("AMI available")
+        elif self.ami.state == "failed":
+            log("AMI failed to be created")
+            # TODO better handling here
+            return
+        else:
+            log("AMI in unhandled state")
+            # TODO better handling here
+            return
 
         self.snapshot_instance.terminate()
         log("Waiting for termination")
@@ -284,37 +302,45 @@ class Instance:
 
     # Helpers
 
-    def _connect_to_instance(self):
-        MAX_WAIT, backoff = 30, 5
-        while True:
-            self.instance.reload()
-            public_ip = self.instance.public_ip_address
-            if public_ip:
-                break
-            log("Waiting for {} seconds for instance IP address".format(backoff))
-            time.sleep(backoff)
-            backoff = min(30, backoff + 5)
-        log("IP address obtained:", public_ip)
+    def _create_instance_connection(
+        self, *, instance, key_pair, port=22, user="ubuntu"
+    ):
+        can_connect = lambda: self.instance.public_ip_address
 
-        port = 22
-        user = "ubuntu"
-        self.connection = Connection(
+        def update(**kwargs):
+            self.instance.reload()
+            log(
+                "Waiting for {} seconds for instance IP address".format(
+                    kwargs["backoff"]
+                )
+            )
+
+        backoff_wait(can_connect, update)
+        log("IP address obtained:", self.instance.public_ip_address)
+        return Connection(
             host=public_ip,
             user=user,
             port=port,
-            connect_kwargs={"key_filename": DEFAULT_KEY_PAIR},
+            connect_kwargs={"key_filename": key_pair},
+        )
+
+    def connect_to_instance(self):
+        self.connection = self._create_instance_connection(
+            instance=self.instance, key_pair=DEFAULT_KEY_PAIR
         )
         self.connection.set_remote_interrupt(True)
         log("Waiting for instance to be in 'running' mode")
         self.instance.wait_until_running()
-        while True:
+
+        def can_connect():
             try:
                 self.connection.run('echo "Completed instance connection test"')
+                return True
             except Exception:
-                log("Waiting for instance to respond")
-                time.sleep(5)
-                continue
-            break
+                return False
+
+        update = lambda **kwargs: log("Waiting for instance to respond")
+        backoff_wait(can_connect, update)
         log("Instance is now in 'running' mode")
 
     def _load_local_code(self, code_path):
