@@ -27,9 +27,11 @@ roger train
 FOLDER_NAME = ".roger"
 orchestrator, training_instance = None, None
 
+
 @click.group()
 def cli():
     pass
+
 
 @cli.command()
 def init():
@@ -49,27 +51,41 @@ def init():
     new_user.save_credentials(directory=FOLDER_NAME)
 
 @cli.command()
+def create():
+    click.echo("roger create")
+    """
+    Creates a TrainingInstance
+    """
+
+
+@cli.command()
 def status():
     click.echo("roger status")
+
 
 @cli.command()
 def list():
     click.echo("roger list")
 
+
 @cli.command()
 def upload():
     click.echo("roger upload")
+
 
 @cli.command()
 def deploy():
     click.echo("roger deploy")
 
+
 @cli.command()
 def train():
     click.echo("roger train")
 
+
 def init():
     pass
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     cli()
