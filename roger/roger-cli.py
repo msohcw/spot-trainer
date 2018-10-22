@@ -1,4 +1,8 @@
+import os
+import uuid
 import click
+
+from roger import Orchestrator
 
 """
 roger init --credential
@@ -20,6 +24,7 @@ roger train
 
 """
 
+FOLDER_NAME = ".roger"
 orchestrator, training_instance = None, None
 
 @click.group()
@@ -29,6 +34,19 @@ def cli():
 @cli.command()
 def init():
     click.echo("roger init")
+
+
+    try:
+        os.mkdir(FOLDER_NAME)
+    except FileExistsError:
+        click.echo(
+            "It looks like roger has already been initialized in this project. "
+            "('{}' folder already exists)".format(FOLDER_NAME)
+        )
+        return
+
+    new_user = Orchestrator.register_user()
+    new_user.save_credentials(directory=FOLDER_NAME)
 
 @cli.command()
 def status():
