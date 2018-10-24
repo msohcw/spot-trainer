@@ -397,15 +397,60 @@ class User:
         with open(filepath, 'w') as file:
             file.write(json.dumps(self.credentials))
 
+    def load_credentials(self, directory):
+        filepath = os.path.join(directory, User.filename)
+        with open(filepath, "r") as file:
+            self.credentials = json.loads(file.read())
+
+    @property
+    def iam_user(self):
+        try:
+            user_name = self.credentials['user_name']
+        except KeyError:
+            raise Exception("No credentials found, have you called `load_credentials`?")
+
+        return User.iam.User(user_name)
+
 class PermissionedResource:
     """
     A PermissionedResource is a wrapper around any AWS resource that requires
-    appropriate IAM Credentials to access, e.g. an S3 bucket or an EC2 instance.
+    appropriate IAM roles to access, e.g. an S3 bucket or an EC2 instance.
+
+    This is an abstract class that expects certain methods to be overridden in the
+    implementing class.
+
     """
 
-    def __init__(self):
-        pass
+    iam = boto.resource("iam")
 
+    def __init__(self, training_instance):
+        self.training_instance = training_instance
+        self._permission_resource()
+
+    def _permission_resource(self):
+        import pdb; pdb.set_trace()
+        policy = PermissionedResource.iam.create_policy(**self._policy_parameters())
+        iam_user = self.training_instance.user.iam_user
+        iam_user.attach_policy(PolicyArn=policy.arn)
+
+    @staticmethod
+    def _read_policy_file(policy_filename, mapping=None):
+        with open(policy_filename, "r") as policy_file:
+            policy_document = policy_file.read()
+
+        mapping = mapping or {}
+        for label, replacement in mapping.items():
+            policy_document = policy_document.replace(label, replacement)
+
+        try:
+            policy_document = json.dumps(json.loads(policy_document))
+        except json.decoder.JSONDecodeError as e:
+            raise e
+
+        return policy_document
+
+    def _policy_parameters(self):
+        raise NotImplementedError
 
 class ComputeNode(PermissionedResource):
     """
@@ -421,37 +466,89 @@ class StorageNode(PermissionedResource):
     A wrapper around an S3 Bucket.
     """
 
-    def __init__(self):
-        pass
+    def __init__(self, *, training_instance):
+        super().__init__(training_instance)
+
+    def _policy_parameters(self):
+        uuid = self.training_instance.uuid
+        return {
+            "PolicyName": "{}-s3".format(uuid),
+            "Path": "/{}/".format(uuid),
+            "Description": "Grants S3 access to {}".format(uuid),
+            "PolicyDocument": PermissionedResource._read_policy_file(
+                # TODO verify access only to folder, and not bucket
+                "iam-templates/s3.json",
+                {"$TRAINING_INSTANCE_UUID": uuid},
+            ),
+        }
 
 
 class Orchestrator:
     """
     The Orchestrator is the logical representation of the permissioned AWS profile. It
-    can create buckets, instances and IAM profiles.
+    can create buckets, instances and IAM profiles. One instance of an Orchestrator is
+    built around one TrainingInstance.
     """
 
-    def __init__(self):
-        pass
+    iam = boto.resource("iam")
 
-    def create_training_instance(self):
+    def __init__(self, *, training_instance):
+        self.training_instance = training_instance
+        if not self._is_registered_training_instance():
+            raise Exception
+
+    @staticmethod
+    def register_user():
+        """
+        Registers an AWS user that can be used for a specific project, that has the
+        appropriate policies tied to it.
+        """
+
+        new_user = User()
+        aws_user = Orchestrator.iam.create_user(UserName=new_user.uuid)
+        access_key_pair = aws_user.create_access_key_pair()
+
+        new_user.credentials = {
+            "user_name": access_key_pair.user_name,
+            "access_key_id": access_key_pair.id,
+            "access_key_secret": access_key_pair.secret,
+        }
+
+        return new_user
+
+    @staticmethod
+    def register_training_instance():
         """
         Registers a training instance specific UUID
         """
-        pass
+        # TODO Human readable UUIDs
+        # TODO Register UUID
 
-    def create_storage_node(self, *, training_instance):
+        return make_uuid('ti')
+
+    def _is_registered_training_instance(self):
+        return True
+
+    def create_storage_node(self):
         """
-        Provisions an S3 bucket for parameters and data
-        Returns the appropriate permissions
+        Provisions an S3 folder for parameters and data
+        Returns the appropriate permissions.
         """
-        pass
+        storage_node = StorageNode(training_instance=self.training_instance)
+
+
+        # create S3 folder
+        # create IAM policy
+        # create IAM role
 
 
 class TrainingInstance:
-    def __init__(self, uuid=None):
-        pass
+    def __init__(self, *, uuid, user):
+        self.uuid = uuid
+        self.user = user
+        self.orchestrator = Orchestrator(training_instance=self)
+        self.orchestrator.create_storage_node()
 
-    def upload():
+    def upload(self):
         """ Uploads data to the tied storage node. """
         pass

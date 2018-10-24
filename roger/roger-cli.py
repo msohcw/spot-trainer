@@ -2,7 +2,7 @@ import os
 import uuid
 import click
 
-from roger import Orchestrator
+from roger import Orchestrator, TrainingInstance, User
 
 """
 roger init --credential
@@ -37,7 +37,6 @@ def cli():
 def init():
     click.echo("roger init")
 
-
     try:
         os.mkdir(FOLDER_NAME)
     except FileExistsError:
@@ -50,13 +49,17 @@ def init():
     new_user = Orchestrator.register_user()
     new_user.save_credentials(directory=FOLDER_NAME)
 
+
 @cli.command()
 def create():
     click.echo("roger create")
     """
     Creates a TrainingInstance
     """
-
+    new_training_instance_uuid = Orchestrator.register_training_instance()
+    user = User()
+    user.load_credentials(directory=FOLDER_NAME)
+    training_instance = TrainingInstance(uuid=new_training_instance_uuid, user=user)
 
 @cli.command()
 def status():
