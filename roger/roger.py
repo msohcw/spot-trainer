@@ -378,23 +378,27 @@ def days_from_now(x):
 def log(*args):
     print(*args)
 
+
 def make_uuid(label):
     return "{}_{}".format(label, uuid.uuid4().hex)
 
 class User:
+    iam = boto.resource("iam")
+    filename = "user.json"
+
     """
     A User wraps around service credentials, e.g. AWS account ids and secret keys
     """
+
     def __init__(self):
-        self.uuid = make_uuid('user')
+        self.uuid = make_uuid("user")
         self.credentials = {}
 
     def save_credentials(self, *, directory):
-        filename = 'user.json'
-        filepath = os.path.join(directory, filename)
+        filepath = os.path.join(directory, User.filename)
 
         # This is dumped in plaintext
-        with open(filepath, 'w') as file:
+        with open(filepath, "w") as file:
             file.write(json.dumps(self.credentials))
 
     def load_credentials(self, directory):
