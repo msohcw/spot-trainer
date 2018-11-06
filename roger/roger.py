@@ -382,9 +382,37 @@ def log(*args):
 def make_uuid(label):
     return "{}_{}".format(label, uuid.uuid4().hex)
 
-class User:
+
+class Saveable:
+    @property
+    def filename(self):
+        raise NotImplemented
+
+    def save(self, *, directory):
+        filepath = os.path.join(directory, self.filename)
+
+        dirname = os.path.dirname(filepath)
+        os.makedirs(dirname, exist_ok=True)
+
+        with open(filepath, "w") as file:
+            file.write(json.dumps(self.encode()))
+
+    def load(self, *, directory):
+        filepath = os.path.join(directory, self.filename)
+        with open(filepath, "r") as file:
+            self.decode(json.loads(file.read()))
+
+        return self
+
+    def encode(self):
+        raise NotImplemented
+
+    def decode(self):
+        raise NotImplemented
+
+
+class User(Saveable):
     iam = boto.resource("iam")
-    filename = "user.json"
 
     """
     A User wraps around service credentials, e.g. AWS account ids and secret keys
@@ -394,17 +422,15 @@ class User:
         self.uuid = make_uuid("user")
         self.credentials = {}
 
-    def save_credentials(self, *, directory):
-        filepath = os.path.join(directory, User.filename)
+    def encode(self):
+        return self.credentials
 
-        # This is dumped in plaintext
-        with open(filepath, "w") as file:
-            file.write(json.dumps(self.credentials))
+    def decode(self, data):
+        self.credentials = data
 
-    def load_credentials(self, directory):
-        filepath = os.path.join(directory, User.filename)
-        with open(filepath, "r") as file:
-            self.credentials = json.loads(file.read())
+    @property
+    def filename(self):
+        return "user.json"
 
     @property
     def iam_user(self):

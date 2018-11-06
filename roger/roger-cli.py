@@ -35,8 +35,6 @@ def cli():
 
 @cli.command()
 def init():
-    click.echo("roger init")
-
     try:
         os.mkdir(FOLDER_NAME)
     except FileExistsError:
@@ -47,7 +45,8 @@ def init():
         return
 
     new_user = Orchestrator.register_user()
-    new_user.save_credentials(directory=FOLDER_NAME)
+    new_user.save(directory=FOLDER_NAME)
+    click.echo("Project initialized.")
 
 
 @cli.command()
