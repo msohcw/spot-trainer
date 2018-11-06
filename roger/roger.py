@@ -571,19 +571,36 @@ class Orchestrator:
         """
         storage_node = StorageNode(training_instance=self.training_instance)
 
-
         # create S3 folder
         # create IAM policy
         # create IAM role
 
 
-class TrainingInstance:
-    def __init__(self, *, uuid, user):
+class TrainingInstance(Saveable):
+    def __init__(self, *, uuid, user, create_storage_node=False):
         self.uuid = uuid
         self.user = user
         self.orchestrator = Orchestrator(training_instance=self)
-        self.orchestrator.create_storage_node()
+
+        # TODO this should really query the Orchestrator to see if it needs to create
+        # a new storage node or not
+        if create_storage_node:
+            self.orchestrator.create_storage_node()
 
     def upload(self):
         """ Uploads data to the tied storage node. """
         pass
+
+    @staticmethod
+    def list_all():
+        pass
+
+    @property
+    def filename(self):
+        return "training-instances/{}.json".format(self.uuid)
+
+    def encode(self):
+        return {"uuid": self.uuid, "owner": self.user.uuid}
+
+    def decode(self):
+        return {"uuid": self.uuid, "owner": self.user.uuid}

@@ -51,14 +51,16 @@ def init():
 
 @cli.command()
 def create():
-    click.echo("roger create")
     """
     Creates a TrainingInstance
     """
-    new_training_instance_uuid = Orchestrator.register_training_instance()
     user = User()
-    user.load_credentials(directory=FOLDER_NAME)
+    user.load(directory=FOLDER_NAME)
+    new_training_instance_uuid = Orchestrator.register_training_instance()
     training_instance = TrainingInstance(uuid=new_training_instance_uuid, user=user)
+    training_instance.save(directory=FOLDER_NAME)
+    click.echo("Training Instance ({}) created.".format(training_instance.uuid))
+
 
 @cli.command()
 def status():
