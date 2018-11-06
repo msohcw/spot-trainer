@@ -440,7 +440,7 @@ class User(Saveable):
     @property
     def iam_user(self):
         try:
-            user_name = self.credentials['user_name']
+            user_name = self.credentials["user_name"]
         except KeyError:
             raise Exception("No credentials found, have you called `load_credentials`?")
 
@@ -463,7 +463,6 @@ class PermissionedResource:
         self._permission_resource()
 
     def _permission_resource(self):
-        import pdb; pdb.set_trace()
         policy = PermissionedResource.iam.create_policy(**self._policy_parameters())
         iam_user = self.training_instance.user.iam_user
         iam_user.attach_policy(PolicyArn=policy.arn)
@@ -486,6 +485,7 @@ class PermissionedResource:
 
     def _policy_parameters(self):
         raise NotImplementedError
+
 
 class ComputeNode(PermissionedResource):
     """
@@ -559,7 +559,7 @@ class Orchestrator:
         # TODO Human readable UUIDs
         # TODO Register UUID
 
-        return make_uuid('ti')
+        return make_uuid("ti")
 
     def _is_registered_training_instance(self):
         return True
