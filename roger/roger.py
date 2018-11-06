@@ -89,6 +89,11 @@ def backoff_wait(predicate, update, backoff_max=30, backoff_step=5, initial=5):
         backoff = min(backoff_max, backoff + backoff_step)
 
 
+def local_path(path):
+    local_dir = os.path.dirname(__file__)
+    return os.path.join(local_dir, path)
+
+
 class Instance:
     def __init__(self):
         self.ec2 = boto.resource("ec2")
@@ -507,7 +512,7 @@ class StorageNode(PermissionedResource):
             "Description": "Grants S3 access to {}".format(uuid),
             "PolicyDocument": PermissionedResource._read_policy_file(
                 # TODO verify access only to folder, and not bucket
-                "iam-templates/s3.json",
+                local_path("iam-templates/s3.json"),
                 {"$TRAINING_INSTANCE_UUID": uuid},
             ),
         }
