@@ -2,7 +2,7 @@ import os
 import uuid
 import click
 
-from roger import Orchestrator, TrainingInstance, User, Saveable
+from roger import Orchestrator, TrainingInstance, User, Saveable, Session
 
 """
 roger init --credential
@@ -14,6 +14,9 @@ roger status
 
 roger list resource
     - returns active credentials
+
+roger use $TI_ID
+    - changes active training instance
 
 roger upload --data
     -
@@ -44,8 +47,9 @@ def init():
         )
         return
 
-    new_user = Orchestrator.register_user()
-    new_user.save(directory=FOLDER_NAME)
+    new_user = Orchestrator.register_user().save()
+    new_session = Session().save()
+
     click.echo("Project initialized.")
 
 
@@ -54,17 +58,42 @@ def create():
     """
     Creates a TrainingInstance
     """
-    user = User()
-    user.load(directory=FOLDER_NAME)
+    user = User().load()
+    session = Session().load()
+
     new_training_instance_uuid = Orchestrator.register_training_instance()
-    training_instance = TrainingInstance(uuid=new_training_instance_uuid, user=user)
-    training_instance.save(directory=FOLDER_NAME)
+    training_instance = TrainingInstance(
+        uuid=new_training_instance_uuid,
+        user=user,
+        create_storage_node=True,  # TODO remove this parameter
+    )
+
+    session.active_training_instance = training_instance
+
+    training_instance.save()
+    session.save()
+
     click.echo("Training Instance ({}) created.".format(training_instance.uuid))
 
 
 @cli.command()
+@click.argument("training_instance_id")
+def use(training_instance_id):
+    session = Session().load()
+    session.active_training_instance = training_instance_id
+    session.save()
+
+    click.echo(
+        "Now using Training Instance {}".format(session.active_training_instance.uuid)
+    )
+
+
+@cli.command()
 def status():
-    click.echo("roger status")
+    session = Session().load()
+    click.echo(
+        "Using Training Instance {}".format(session.active_training_instance.uuid)
+    )
 
 
 @cli.command()
