@@ -49,11 +49,10 @@ def init():
     try:
         os.mkdir(FOLDER_NAME)
     except FileExistsError:
-        click.echo(
+        raise click.UsageError(
             "It looks like roger has already been initialized in this project. "
             "('{}' folder already exists)".format(FOLDER_NAME)
         )
-        return
 
     new_user = Orchestrator.register_user().save()
     new_session = Session().save()
