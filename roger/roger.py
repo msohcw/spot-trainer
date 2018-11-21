@@ -477,7 +477,9 @@ class Session(Saveable):
             if ti == SentinelTrainingInstance.uuid:
                 self.active_training_instance = SentinelTrainingInstance()
             else:
-                self._active_training_instance = TrainingInstance(uuid=ti, user=None).load()
+                self._active_training_instance = TrainingInstance(
+                    uuid=ti, user=None
+                ).load()
         elif isinstance(ti, TrainingInstance):
             self._active_training_instance = ti
         else:
@@ -651,8 +653,9 @@ class TrainingInstance(Saveable):
         return {"uuid": self.uuid, "owner": self.user.uuid}
 
     def decode(self, data):
-        self.uuid = data['uuid']
+        self.uuid = data["uuid"]
         # TODO what about user?
+
 
 class SentinelTrainingInstance(TrainingInstance):
     uuid = "ti_sentinel"

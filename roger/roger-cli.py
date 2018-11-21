@@ -116,9 +116,5 @@ def train():
     click.echo("roger train")
 
 
-def init():
-    pass
-
-
 if __name__ == "__main__":
     cli()
