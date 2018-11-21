@@ -94,6 +94,10 @@ def status():
     click.echo(
         "Using Training Instance {}".format(session.active_training_instance.uuid)
     )
+    if session.available_training_instances:
+        click.echo("Available Training Instances:")
+        for training_instance in session.available_training_instances:
+            click.echo(training_instance.uuid)
 
 
 @cli.command()

@@ -461,6 +461,7 @@ class Session(Saveable):
     """
 
     def __init__(self):
+        self.available_training_instances = set()
         self.active_training_instance = SentinelTrainingInstance()
 
     @property
@@ -475,7 +476,7 @@ class Session(Saveable):
     def active_training_instance(self, ti):
         if isinstance(ti, str):
             if ti == SentinelTrainingInstance.uuid:
-                self.active_training_instance = SentinelTrainingInstance()
+                self._active_training_instance = SentinelTrainingInstance()
             else:
                 self._active_training_instance = TrainingInstance(
                     uuid=ti, user=None
@@ -488,12 +489,28 @@ class Session(Saveable):
                 "TrainingInstance id"
             )  # TODO make this informative
 
+        if not isinstance(self._active_training_instance, SentinelTrainingInstance):
+            self.available_training_instances.add(self._active_training_instance)
+
     def encode(self):
-        return {"active_training_instance": self.active_training_instance.uuid}
+        available_training_instances = tuple(
+            x.uuid for x in self.available_training_instances
+        )
+        return {
+            "active_training_instance": self.active_training_instance.uuid,
+            "available_training_instances": available_training_instances,
+        }
 
     def decode(self, data):
         # TODO verify keys in data
         self.active_training_instance = data["active_training_instance"]
+        self.available_training_instances = set(
+            TrainingInstance(uuid=uuid, user=None).load()
+            for uuid in data["available_training_instances"]
+        )
+
+    def __repr__(self):
+        return "<Training Instance {}>".format(self.uuid)
 
 
 class PermissionedResource:
