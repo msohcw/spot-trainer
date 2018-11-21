@@ -29,11 +29,19 @@ roger train
 
 FOLDER_NAME = ".roger"
 orchestrator, training_instance = None, None
+Saveable.directory = FOLDER_NAME
 
 
 @click.group()
-def cli():
-    Saveable.directory = FOLDER_NAME
+@click.pass_context
+def cli(ctx):
+    if ctx.invoked_subcommand not in ("init",):
+        try:
+            ctx.obj = Session().load()
+        except Exception:
+            # TODO This is a FileNotFoundException right now, but should be made specific
+            # in the Saveable class instead.
+            raise click.UsageError("No session found. Have you called roger init?")
 
 
 @cli.command()
@@ -54,12 +62,12 @@ def init():
 
 
 @cli.command()
-def create():
+@click.pass_obj
+def create(session):
     """
     Creates a TrainingInstance
     """
     user = User().load()
-    session = Session().load()
 
     new_training_instance_uuid = Orchestrator.register_training_instance()
     training_instance = TrainingInstance(
@@ -78,8 +86,8 @@ def create():
 
 @cli.command()
 @click.argument("training_instance_id")
-def use(training_instance_id):
-    session = Session().load()
+@click.pass_obj
+def use(session, training_instance_id):
     session.active_training_instance = training_instance_id
     session.save()
 
@@ -89,8 +97,8 @@ def use(training_instance_id):
 
 
 @cli.command()
-def status():
-    session = Session().load()
+@click.pass_obj
+def status(session):
     click.echo(
         "Using Training Instance {}".format(session.active_training_instance.uuid)
     )
