@@ -452,6 +452,48 @@ class User(Saveable):
 
         return User.iam.User(user_name)
 
+
+class Session(Saveable):
+    """
+    Wraps around an active roger session
+
+    - active training instance
+    """
+
+    def __init__(self):
+        self.active_training_instance = SentinelTrainingInstance()
+
+    @property
+    def filename(self):
+        return "session.json"
+
+    @property
+    def active_training_instance(self):
+        return self._active_training_instance
+
+    @active_training_instance.setter
+    def active_training_instance(self, ti):
+        if isinstance(ti, str):
+            if ti == SentinelTrainingInstance.uuid:
+                self.active_training_instance = SentinelTrainingInstance()
+            else:
+                self._active_training_instance = TrainingInstance(uuid=ti, user=None).load()
+        elif isinstance(ti, TrainingInstance):
+            self._active_training_instance = ti
+        else:
+            raise Exception(
+                "Tried to set active training instance to not a TrainingInstance or "
+                "TrainingInstance id"
+            )  # TODO make this informative
+
+    def encode(self):
+        return {"active_training_instance": self.active_training_instance.uuid}
+
+    def decode(self, data):
+        # TODO verify keys in data
+        self.active_training_instance = data["active_training_instance"]
+
+
 class PermissionedResource:
     """
     A PermissionedResource is a wrapper around any AWS resource that requires
@@ -611,3 +653,16 @@ class TrainingInstance(Saveable):
     def decode(self, data):
         self.uuid = data['uuid']
         # TODO what about user?
+
+class SentinelTrainingInstance(TrainingInstance):
+    uuid = "ti_sentinel"
+
+    def __init__(self):
+        pass
+
+    # Does not save or load
+    def save(self, *, directory=None):
+        pass
+
+    def load(self, *, directory=None):
+        pass
