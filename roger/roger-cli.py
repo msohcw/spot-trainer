@@ -2,7 +2,7 @@ import os
 import uuid
 import click
 
-from roger import Orchestrator, TrainingInstance, User
+from roger import Orchestrator, TrainingInstance, User, Saveable
 
 """
 roger init --credential
@@ -30,7 +30,7 @@ orchestrator, training_instance = None, None
 
 @click.group()
 def cli():
-    pass
+    Saveable.directory = FOLDER_NAME
 
 
 @cli.command()

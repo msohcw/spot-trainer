@@ -389,11 +389,15 @@ def make_uuid(label):
 
 
 class Saveable:
+    directory = None
+
     @property
     def filename(self):
-        raise NotImplemented
+        raise NotImplementedError
 
-    def save(self, *, directory):
+    def save(self, *, directory=None):
+        directory = directory or Saveable.directory
+
         filepath = os.path.join(directory, self.filename)
 
         dirname = os.path.dirname(filepath)
@@ -402,7 +406,9 @@ class Saveable:
         with open(filepath, "w") as file:
             file.write(json.dumps(self.encode()))
 
-    def load(self, *, directory):
+    def load(self, *, directory=None):
+        directory = directory or Saveable.directory
+
         filepath = os.path.join(directory, self.filename)
         with open(filepath, "r") as file:
             self.decode(json.loads(file.read()))
@@ -410,10 +416,10 @@ class Saveable:
         return self
 
     def encode(self):
-        raise NotImplemented
+        raise NotImplementedError
 
-    def decode(self):
-        raise NotImplemented
+    def decode(self, data):
+        raise NotImplementedError
 
 
 class User(Saveable):
@@ -602,5 +608,6 @@ class TrainingInstance(Saveable):
     def encode(self):
         return {"uuid": self.uuid, "owner": self.user.uuid}
 
-    def decode(self):
-        return {"uuid": self.uuid, "owner": self.user.uuid}
+    def decode(self, data):
+        self.uuid = data['uuid']
+        # TODO what about user?
